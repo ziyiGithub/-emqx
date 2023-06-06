@@ -1,0 +1,11 @@
+server:
+  port: 8991
+spring:
+  application:
+    name: emq-demo
+
+mqtt:
+  broker-url: tcp://121.41.6.44:1883
+  client-id: emq-client
+  username: user
+  password: 123456

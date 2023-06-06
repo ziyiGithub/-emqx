@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>mqtt.js测试</title>
+    <script src="https://cdn.staticfile.org/jquery/1.10.2/jquery.min.js" ></script>
+
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js" ></script>
+    <style>
+        div{
+            width: 300px;
+            height: 300px;
+            float: left;
+            border: 1px solid red;
+        }
+    </style>
+    <script type="text/javascript">
+        $(function () {
+
+            //定义连接选项对象
+            const  options = {
+                clean: true, // 不保留回话
+                connectTimeout: 4000, // 超时时间
+                // 认证信息
+                clientId: 'emqx_client_h5',
+                username: 'user',
+                password: '123456',
+            }
+            const connectUrl = "ws://121.41.6.44:8083/mqtt";
+            const client = mqtt.connect(connectUrl,options);
+
+            /**
+             * mqtt.Client相关事件
+             */
+            //当重新连接启动触发回调
+            client.on('reconnect', () => {
+                $("#div1").text("正在重连.....");
+            });
+            //连接断开后触发的回调
+            client.on("close",function () {
+                $("#div1").text("客户端已断开连接.....");
+            });
+            //从broker接收到断开连接的数据包后发出。MQTT 5.0特性
+            client.on("disconnect",function (packet) {
+                $("#div1").text("从broker接收到断开连接的数据包....."+packet);
+            });
+            //客户端脱机下线触发回调
+            client.on("offline",function () {
+                $("#div1").text("客户端脱机下线.....");
+            });
+            //当客户端无法连接或出现错误时触发回调
+            client.on("error",(error) =>{
+                $("#div1").text("客户端出现错误....."+error);
+            });
+
+            //以下两个事件监听粒度细
+
+            //当客户端发送任何数据包时发出。这包括published()包以及MQTT用于管理订阅和连接的包
+            client.on("packetsend",(packet)=>{
+                $("#div1").text("客户端已发出数据包....."+packet);
+            });
+            //当客户端接收到任何数据包时发出。这包括来自订阅主题的信息包以及MQTT用于管理订阅和连接的信息包
+            client.on("packetreceive",(packet)=>{
+                $("#div1").text("客户端已收到数据包....."+packet);
+            });
+
+
+            //注册监听connect事件
+            client.on("connect",function (connack) {
+                //成功连接上服务端之后
+                $("#div1").text("成功连接上服务器"+new Date());
+                //订阅 testtopic/#
+                client.subscribe("testtopic/#",{qos:2});
+
+
+                //每隔2秒钟发布一次
+                setInterval(publish,2000);
+
+            });
+
+            function publish() {
+                //发布数据
+                const message = "h5 message "+Math.random()+new Date();
+                client.publish("testtopic/123",message,{qos:2});
+                $("#div2").text("客户端发布了数据:"+message);
+            }
+
+            //注册消息到达的事件
+            client.on("message",(topic, message, packet)=>{
+                $("#div3").text("客户端收到订阅消息,topic="+topic+";消息数据:"+message+";数据包:"+packet);
+            });
+
+
+            //页面离开自动断开连接
+            $(window).bind("beforeunload",()=>{
+                $("#div1").text("客户端窗口关闭,断开连接");
+                client.end();
+            })
+
+        });
+
+    </script>
+</head>
+<body>
+
+
+<div id="div1"></div>
+<div id="div2"></div>
+<div id="div3"></div>
+</body>
+</html>
